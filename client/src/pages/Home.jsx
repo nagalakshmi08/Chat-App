@@ -1,66 +1,68 @@
-import axios from 'axios'
-import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { logout, setOnlineUser, setSocketConnection, setUser } from '../redux/userSlice'
-import Sidebar from '../components/Sidebar'
-import logo from '../assets/Logo.png'
-import io from 'socket.io-client'
+import axios from 'axios';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { logout, setOnlineUser, setSocketConnection, setUser } from '../redux/userSlice';
+import Sidebar from '../components/Sidebar';
+import logo from '../assets/Logo.png';
+import io from 'socket.io-client';
 
 const Home = () => {
-  const user = useSelector(state => state.user)
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const user = useSelector(state => state.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  console.log('user', user)
+  console.log('user', user);
 
   const fetchUserDetails = async () => {
-    const URL = `${import.meta.env.VITE_BACKEND_URL}/api/user-details`
+    const URL = `${import.meta.env.VITE_BACKEND_URL}/api/user-details`;
     try {
       const response = await axios({
         url: URL,
         withCredentials: true
-      })
+      });
 
-      dispatch(setUser(response.data.data))
+      dispatch(setUser(response.data.data));
 
       if (response.data.data.logout) {
-        dispatch(logout())
-        navigate('/email')
+        dispatch(logout());
+        navigate('/email');
       }
 
-      console.log('current user details', response)
+      console.log('current user details', response);
     } catch (error) {
-      console.log('error', error)
+      console.log('error', error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchUserDetails()
-  }, [])
+    fetchUserDetails();
+  }, []);
 
   // socket connection
   useEffect(() => {
     const socketConnection = io(import.meta.env.VITE_BACKEND_URL, {
       auth: {
         token: localStorage.getItem('token')
-      }
-    })
+      },
+      transports: ['websocket'],
+      withCredentials: true
+    });
 
     socketConnection.on('onlineUser', (data) => {
-      console.log(data)
-      dispatch(setOnlineUser(data))
-    })
+      console.log(data);
+      dispatch(setOnlineUser(data));
+    });
 
-    dispatch(setSocketConnection(socketConnection))  // Corrected this line
+    dispatch(setSocketConnection(socketConnection));
 
     return () => {
-      socketConnection.disconnect()
-    }
-  }, [])
+      socketConnection.disconnect();
+    };
+  }, [dispatch]);
 
-  const basePath = location.pathname === '/'
+  const basePath = location.pathname === '/';
 
   return (
     <div className='grid lg:grid-cols-[300px,1fr] h-screen max-h-screen'>
@@ -68,7 +70,6 @@ const Home = () => {
         <Sidebar />
       </section>
 
-      {/* message component */}
       <section className={`${basePath && 'hidden'}`}>
         <Outlet />
       </section>
@@ -86,7 +87,7 @@ const Home = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

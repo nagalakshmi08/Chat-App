@@ -8,7 +8,7 @@ import logo from '../assets/Logo.png';
 import io from 'socket.io-client';
 
 const Home = () => {
-  const user = useSelector(state => state.user);
+  const user = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,7 +20,7 @@ const Home = () => {
     try {
       const response = await axios({
         url: URL,
-        withCredentials: true
+        withCredentials: true,
       });
 
       dispatch(setUser(response.data.data));
@@ -40,14 +40,25 @@ const Home = () => {
     fetchUserDetails();
   }, []);
 
-  // socket connection
   useEffect(() => {
     const socketConnection = io(import.meta.env.VITE_BACKEND_URL, {
       auth: {
-        token: localStorage.getItem('token')
+        token: localStorage.getItem('token'),
       },
       transports: ['websocket'],
-      withCredentials: true
+      withCredentials: true,
+    });
+
+    socketConnection.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+
+    socketConnection.on('disconnect', (reason) => {
+      console.log('Disconnected from WebSocket server', reason);
+    });
+
+    socketConnection.on('connect_error', (error) => {
+      console.error('Connection error:', error);
     });
 
     socketConnection.on('onlineUser', (data) => {
@@ -65,7 +76,7 @@ const Home = () => {
   const basePath = location.pathname === '/';
 
   return (
-    <div className='grid lg:grid-cols-[300px,1fr] h-screen max-h-screen'>
+    <div className="grid lg:grid-cols-[300px,1fr] h-screen max-h-screen">
       <section className={`bg-white ${!basePath && 'hidden'} lg:block`}>
         <Sidebar />
       </section>
@@ -75,15 +86,10 @@ const Home = () => {
       </section>
 
       {basePath && (
-        <div className='justify-center items-center flex-col gap-2 hidden lg:flex'>
+        <div className="justify-center items-center flex-col gap-2 hidden lg:flex">
           <div>
-            <img
-              src={logo}
-              width={250}
-              alt='logo'
-            />
-          </div>
-          <p className='text-lg mt-2 text-slate-500'>Select user to send message!</p>
+            <img src={logo} width={250} alt="logo" />
+          <p className="text-lg mt-2 text-slate-500">Select user to send a message!</p>
         </div>
       )}
     </div>

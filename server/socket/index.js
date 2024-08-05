@@ -1,14 +1,22 @@
 const express = require('express');
 const { Server } = require('socket.io');
 const http = require('http');
+const cors = require('cors');
+require('dotenv').config();
+
 const getUserDetailFromToken = require('../helpers/getUserDetailsFromToken');
 const UserModel = require('../models/UserModel');
 const { ConversationModel, MessageModel } = require('../models/ConversationModel');
-const getConversation = require('../helpers/getConversation.js');
-require('dotenv').config();
+const getConversation = require('../helpers/getConversation.js')
 
 const app = express();
 const server = http.createServer(app);
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
+
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
@@ -20,6 +28,10 @@ const onlineUser = new Set();
 
 io.on('connection', async (socket) => {
   console.log('Connected user:', socket.id);
+
+  socket.on('connect_error', (error) => {
+    console.error('Connection error:', error);
+  });
 
   const token = socket.handshake.auth.token;
   if (!token) {
@@ -35,7 +47,7 @@ io.on('connection', async (socket) => {
       socket.disconnect();
       return;
     }
-    
+
     socket.join(user._id.toString());
     onlineUser.add(user._id.toString());
     io.emit('onlineUser', Array.from(onlineUser));
@@ -135,30 +147,26 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('seen', async (msgByUserId) => {
-      try {
-        let conversation = await ConversationModel.findOne({
-          '$or': [
-            { sender: user?._id, receiver: msgByUserId },
-            { sender: msgByUserId, receiver: user?._id }
-          ]
-        });
+      let conversation = await ConversationModel.findOne({
+        '$or': [
+          { sender: user?._id, receiver: msgByUserId },
+          { sender: msgByUserId, receiver: user?._id }
+        ]
+      });
 
-        const conversationMessageId = conversation?.messages || [];
+      const conversationMessageId = conversation?.messages || [];
 
-        await MessageModel.updateMany(
-          { _id: { '$in': conversationMessageId }, msgByUserId: msgByUserId },
-          { '$set': { seen: true } }
-        );
+      const updateMessages = await MessageModel.updateMany(
+        { _id: { '$in': conversationMessageId }, msgByUserId: msgByUserId },
+        { '$set': { seen: true } }
+      );
 
-        const conversationSender = await getConversation(user?._id.toString());
-        const conversationReceiver = await getConversation(msgByUserId);
+      const conversationSender = await getConversation(user?._id.toString());
+      const conversationReceiver = await getConversation(msgByUserId);
 
-        io.to(user?._id.toString()).emit('conversation', conversationSender);
-        io.to(msgByUserId).emit('conversation', conversationReceiver);
+      io.to(user?._id.toString()).emit('conversation', conversationSender);
+      io.to(msgByUserId).emit('conversation', conversationReceiver);
 
-      } catch (error) {
-        console.error('Error marking messages as seen:', error);
-      }
     });
 
     socket.on('disconnect', () => {

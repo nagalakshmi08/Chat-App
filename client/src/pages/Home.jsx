@@ -89,6 +89,7 @@ const Home = () => {
         <div className="justify-center items-center flex-col gap-2 hidden lg:flex">
           <div>
             <img src={logo} width={250} alt="logo" />
+          </div>
           <p className="text-lg mt-2 text-slate-500">Select user to send a message!</p>
         </div>
       )}
